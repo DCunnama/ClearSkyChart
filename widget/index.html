@@ -158,7 +158,7 @@ function averageMetrics(dayRange, days, stats) {
 }
 
 function dailyMetrics(days, stats) {
-  return days.slice(-7).map(d => {
+  return days.slice(-7).reverse().map(d => {
     const s = stats[d];
     return {
       date: d,
@@ -242,7 +242,7 @@ function renderReport(report) {
   const stored = loadStoredMonthly();
   const updated = mergeMonthly(stored, monthlyMetrics(days, stats));
   saveStoredMonthly(updated);
-  Object.keys(updated).sort().slice(-12).forEach(m => {
+  Object.keys(updated).sort().slice(-12).reverse().forEach(m => {
     const val = updated[m];
     const tr = document.createElement('tr');
     tr.innerHTML = `
