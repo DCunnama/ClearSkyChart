@@ -71,7 +71,33 @@
 <script>
 const lat = -32.4;
 const lon = 20.7;
-const days = 365;
+// Open-Meteo only allows ~92 days of historical hourly data
+// so we request the last 3 months and persist monthly averages
+const days = 92;
+
+const storageKey = 'csc-monthly';
+
+function loadStoredMonthly() {
+  try {
+    return JSON.parse(localStorage.getItem(storageKey)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredMonthly(data) {
+  localStorage.setItem(storageKey, JSON.stringify(data));
+}
+
+function mergeMonthly(stored, fresh) {
+  fresh.forEach(m => { stored[m.month] = m; });
+  // keep at most 24 months of history
+  const months = Object.keys(stored).sort();
+  const keep = months.slice(-24);
+  const trimmed = {};
+  keep.forEach(k => { trimmed[k] = stored[k]; });
+  return trimmed;
+}
 
 async function loadWeather() {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
@@ -213,16 +239,20 @@ function renderReport(report) {
 
   const monthlyBody = document.querySelector('#monthly-table tbody');
   monthlyBody.innerHTML = '';
-  monthlyMetrics(days, stats).forEach(m => {
+  const stored = loadStoredMonthly();
+  const updated = mergeMonthly(stored, monthlyMetrics(days, stats));
+  saveStoredMonthly(updated);
+  Object.keys(updated).sort().slice(-12).forEach(m => {
+    const val = updated[m];
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${m.month}</td>
-      <td>${m.temp.toFixed(1)}</td>
-      <td>${m.hum.toFixed(1)}</td>
-      <td>${m.cloud.toFixed(1)}</td>
-      <td>${m.wind.toFixed(1)}</td>
-      <td>${m.darkness.toFixed(1)}</td>
-      <td>${m.clearIndex.toFixed(1)}</td>
+      <td>${m}</td>
+      <td>${val.temp.toFixed(1)}</td>
+      <td>${val.hum.toFixed(1)}</td>
+      <td>${val.cloud.toFixed(1)}</td>
+      <td>${val.wind.toFixed(1)}</td>
+      <td>${val.darkness.toFixed(1)}</td>
+      <td>${val.clearIndex.toFixed(1)}</td>
     `;
     monthlyBody.appendChild(tr);
   });
