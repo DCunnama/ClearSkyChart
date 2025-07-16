@@ -3,17 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <title>Sutherland Clear Sky Widget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-  table { border-collapse: collapse; margin-top: 1em; }
-  th, td { border: 1px solid #ccc; padding: 4px 8px; }
-  th { background: #eee; }
+  body { font-family: 'Roboto', sans-serif; background:#f9f9f9; color:#333; }
+  #widget { max-width: 650px; margin: auto; background:white; padding:1em; border-radius:8px;
+            border:1px solid #ddd; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+  h2 { text-align:center; font-weight:400; }
+  h3 { margin-top:2em; }
+  table { width:100%; border-collapse: collapse; margin-top: 1em; }
+  th, td { border: 1px solid #ccc; padding: 6px 8px; text-align:center; }
+  th { background: #0077b6; color:white; }
+  tbody tr:nth-child(even) { background:#f2f2f2; }
 </style>
 </head>
 <body>
 <div id="widget">
   <h2>Clear Sky Report for Sutherland, South Africa</h2>
   <div id="status">Loading data...</div>
-  <table id="report-table" style="display:none">
+  <h3>Daily Metrics (last 7 days)</h3>
+  <table id="daily-table" style="display:none">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Avg Temp °C</th>
+        <th>Avg Humidity %</th>
+        <th>Avg Cloud %</th>
+        <th>Avg Wind m/s</th>
+        <th>Darkness %</th>
+        <th>Clear Sky Index</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <h3>7/14/28 Day Averages</h3>
+  <table id="summary-table" style="display:none">
     <thead>
       <tr>
         <th>Period (days)</th>
@@ -90,11 +115,41 @@ function averageMetrics(dayRange, days, stats) {
   };
 }
 
+function dailyMetrics(days, stats) {
+  return days.slice(-7).map(d => {
+    const s = stats[d];
+    return {
+      date: d,
+      temp: s.temp / s.count,
+      hum: s.hum / s.count,
+      cloud: s.cloud / s.count,
+      wind: s.wind / s.count,
+      darkness: 100 * s.nightHours / s.count,
+      clearIndex: 100 - (s.cloud / s.count)
+    };
+  });
+}
+
 function renderReport(report) {
   const days = report.days;
   const stats = report.stats;
+  const dailyBody = document.querySelector('#daily-table tbody');
+  dailyBody.innerHTML = '';
+  dailyMetrics(days, stats).forEach(m => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.date}</td>
+      <td>${m.temp.toFixed(1)}</td>
+      <td>${m.hum.toFixed(1)}</td>
+      <td>${m.cloud.toFixed(1)}</td>
+      <td>${m.wind.toFixed(1)}</td>
+      <td>${m.darkness.toFixed(1)}</td>
+      <td>${m.clearIndex.toFixed(1)}</td>
+    `;
+    dailyBody.appendChild(tr);
+  });
   const periods = [7, 14, 28];
-  const tbody = document.querySelector('#report-table tbody');
+  const tbody = document.querySelector('#summary-table tbody');
   tbody.innerHTML = '';
   periods.forEach(p => {
     const metrics = averageMetrics(p, days, stats);
@@ -111,7 +166,8 @@ function renderReport(report) {
     tbody.appendChild(tr);
   });
   document.getElementById('status').style.display = 'none';
-  document.getElementById('report-table').style.display = '';
+  document.getElementById('daily-table').style.display = '';
+  document.getElementById('summary-table').style.display = '';
 }
 
 loadWeather();
