@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sutherland Clear Sky Widget</title>
+<style>
+  table { border-collapse: collapse; margin-top: 1em; }
+  th, td { border: 1px solid #ccc; padding: 4px 8px; }
+  th { background: #eee; }
+</style>
+</head>
+<body>
+<div id="widget">
+  <h2>Clear Sky Report for Sutherland, South Africa</h2>
+  <div id="status">Loading data...</div>
+  <table id="report-table" style="display:none">
+    <thead>
+      <tr>
+        <th>Period (days)</th>
+        <th>Avg Temp °C</th>
+        <th>Avg Humidity %</th>
+        <th>Avg Cloud %</th>
+        <th>Avg Wind m/s</th>
+        <th>Darkness %</th>
+        <th>Clear Sky Index</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+<script>
+const lat = -32.4;
+const lon = 20.7;
+const days = 28;
+
+async function loadWeather() {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+              `&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m,is_day` +
+              `&past_days=${days}&timezone=UTC`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network response was not ok');
+    const data = await response.json();
+    const report = processData(data.hourly);
+    renderReport(report);
+  } catch (err) {
+    document.getElementById('status').textContent = 'Failed to load data';
+    console.error(err);
+  }
+}
+
+function processData(hourly) {
+  const stats = {};
+  for (let i = 0; i < hourly.time.length; i++) {
+    const date = hourly.time[i].split('T')[0];
+    if (!stats[date]) {
+      stats[date] = {count:0, temp:0, hum:0, cloud:0, wind:0, nightHours:0};
+    }
+    stats[date].count++;
+    stats[date].temp += hourly.temperature_2m[i];
+    stats[date].hum += hourly.relativehumidity_2m[i];
+    stats[date].cloud += hourly.cloudcover[i];
+    stats[date].wind += hourly.windspeed_10m[i];
+    if (hourly.is_day[i] === 0) stats[date].nightHours++;
+  }
+  const days = Object.keys(stats).sort();
+  return { days, stats };
+}
+
+function averageMetrics(dayRange, days, stats) {
+  const slice = days.slice(-dayRange);
+  let totalHours = 0;
+  let sumTemp = 0, sumHum = 0, sumCloud = 0, sumWind = 0, nightHours = 0;
+  for (const d of slice) {
+    const s = stats[d];
+    totalHours += s.count;
+    sumTemp += s.temp;
+    sumHum += s.hum;
+    sumCloud += s.cloud;
+    sumWind += s.wind;
+    nightHours += s.nightHours;
+  }
+  return {
+    temp: sumTemp / totalHours,
+    hum: sumHum / totalHours,
+    cloud: sumCloud / totalHours,
+    wind: sumWind / totalHours,
+    darkness: 100 * nightHours / totalHours,
+    clearIndex: 100 - (sumCloud / totalHours)
+  };
+}
+
+function renderReport(report) {
+  const days = report.days;
+  const stats = report.stats;
+  const periods = [7, 14, 28];
+  const tbody = document.querySelector('#report-table tbody');
+  tbody.innerHTML = '';
+  periods.forEach(p => {
+    const metrics = averageMetrics(p, days, stats);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p}</td>
+      <td>${metrics.temp.toFixed(1)}</td>
+      <td>${metrics.hum.toFixed(1)}</td>
+      <td>${metrics.cloud.toFixed(1)}</td>
+      <td>${metrics.wind.toFixed(1)}</td>
+      <td>${metrics.darkness.toFixed(1)}</td>
+      <td>${metrics.clearIndex.toFixed(1)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('report-table').style.display = '';
+}
+
+loadWeather();
+</script>
+</body>
+</html>
