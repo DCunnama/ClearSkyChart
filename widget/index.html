@@ -84,7 +84,8 @@ async function loadWeather() {
     const report = processData(data.hourly);
     renderReport(report);
   } catch (err) {
-    document.getElementById('status').textContent = 'Failed to load data';
+    const msg = 'Failed to load data: ' + (err.message || err);
+    document.getElementById('status').textContent = msg;
     console.error(err);
   }
 }

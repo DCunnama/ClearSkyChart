@@ -11,3 +11,9 @@ This repository contains a simple web widget that fetches weather data for **Sut
    ```
 
 The code does not require any build step and only relies on the browser's fetch API. Internet access is required at runtime to retrieve data from Open-Meteo.
+
+## Troubleshooting
+
+If the widget displays **"Failed to load data"**, ensure that your network
+allows connections to `api.open-meteo.com`. Some environments block external
+requests, which will prevent the data from loading.
