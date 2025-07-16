@@ -52,11 +52,26 @@
     </thead>
     <tbody></tbody>
   </table>
+  <h3>Monthly Averages (last 12 months)</h3>
+  <table id="monthly-table" style="display:none">
+    <thead>
+      <tr>
+        <th>Month</th>
+        <th>Avg Temp °C</th>
+        <th>Avg Humidity %</th>
+        <th>Avg Cloud %</th>
+        <th>Avg Wind m/s</th>
+        <th>Darkness %</th>
+        <th>Clear Sky Index</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </div>
 <script>
 const lat = -32.4;
 const lon = 20.7;
-const days = 28;
+const days = 365;
 
 async function loadWeather() {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
@@ -130,6 +145,35 @@ function dailyMetrics(days, stats) {
   });
 }
 
+function monthlyMetrics(days, stats) {
+  const months = {};
+  days.forEach(d => {
+    const m = d.slice(0, 7); // YYYY-MM
+    if (!months[m]) {
+      months[m] = {count:0, temp:0, hum:0, cloud:0, wind:0, nightHours:0};
+    }
+    const s = stats[d];
+    months[m].count += s.count;
+    months[m].temp += s.temp;
+    months[m].hum += s.hum;
+    months[m].cloud += s.cloud;
+    months[m].wind += s.wind;
+    months[m].nightHours += s.nightHours;
+  });
+  return Object.keys(months).sort().slice(-12).map(m => {
+    const s = months[m];
+    return {
+      month: m,
+      temp: s.temp / s.count,
+      hum: s.hum / s.count,
+      cloud: s.cloud / s.count,
+      wind: s.wind / s.count,
+      darkness: 100 * s.nightHours / s.count,
+      clearIndex: 100 - (s.cloud / s.count)
+    };
+  });
+}
+
 function renderReport(report) {
   const days = report.days;
   const stats = report.stats;
@@ -165,9 +209,26 @@ function renderReport(report) {
     `;
     tbody.appendChild(tr);
   });
+
+  const monthlyBody = document.querySelector('#monthly-table tbody');
+  monthlyBody.innerHTML = '';
+  monthlyMetrics(days, stats).forEach(m => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.month}</td>
+      <td>${m.temp.toFixed(1)}</td>
+      <td>${m.hum.toFixed(1)}</td>
+      <td>${m.cloud.toFixed(1)}</td>
+      <td>${m.wind.toFixed(1)}</td>
+      <td>${m.darkness.toFixed(1)}</td>
+      <td>${m.clearIndex.toFixed(1)}</td>
+    `;
+    monthlyBody.appendChild(tr);
+  });
   document.getElementById('status').style.display = 'none';
   document.getElementById('daily-table').style.display = '';
   document.getElementById('summary-table').style.display = '';
+  document.getElementById('monthly-table').style.display = '';
 }
 
 loadWeather();
