@@ -22,6 +22,21 @@
 <div id="widget">
   <h2>Clear Sky Report for Sutherland, South Africa</h2>
   <div id="status">Loading data...</div>
+  <h3>Forecast (next 7 days)</h3>
+  <table id="forecast-table" style="display:none">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Avg Temp °C</th>
+        <th>Avg Humidity %</th>
+        <th>Avg Cloud %</th>
+        <th>Avg Wind m/s</th>
+        <th>Darkness %</th>
+        <th>Clear Sky Index</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
   <h3>Daily Metrics (last 7 days)</h3>
   <table id="daily-table" style="display:none">
     <thead>
@@ -77,6 +92,14 @@ const days = 92;
 
 const storageKey = 'csc-monthly';
 
+function colorForIndex(val) {
+  if (val < 20) return 'LightSlateGray';
+  if (val < 40) return 'LightSteelBlue';
+  if (val < 60) return 'LightSkyBlue';
+  if (val < 80) return 'SkyBlue';
+  return 'DeepSkyBlue';
+}
+
 function loadStoredMonthly() {
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || {};
@@ -102,7 +125,7 @@ function mergeMonthly(stored, fresh) {
 async function loadWeather() {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
               `&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m,is_day` +
-              `&past_days=${days}&timezone=UTC`;
+              `&past_days=${days}&forecast_days=7&timezone=UTC`;
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
@@ -172,6 +195,22 @@ function dailyMetrics(days, stats) {
   });
 }
 
+function forecastMetrics(days, stats) {
+  const today = new Date().toISOString().slice(0,10);
+  return days.filter(d => d >= today).slice(0,7).map(d => {
+    const s = stats[d];
+    return {
+      date: d,
+      temp: s.temp / s.count,
+      hum: s.hum / s.count,
+      cloud: s.cloud / s.count,
+      wind: s.wind / s.count,
+      darkness: 100 * s.nightHours / s.count,
+      clearIndex: 100 - (s.cloud / s.count)
+    };
+  });
+}
+
 function monthlyMetrics(days, stats) {
   const months = {};
   days.forEach(d => {
@@ -204,6 +243,21 @@ function monthlyMetrics(days, stats) {
 function renderReport(report) {
   const days = report.days;
   const stats = report.stats;
+  const forecastBody = document.querySelector('#forecast-table tbody');
+  forecastBody.innerHTML = '';
+  forecastMetrics(days, stats).forEach(m => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.date}</td>
+      <td>${m.temp.toFixed(1)}</td>
+      <td>${m.hum.toFixed(1)}</td>
+      <td>${m.cloud.toFixed(1)}</td>
+      <td>${m.wind.toFixed(1)}</td>
+      <td>${m.darkness.toFixed(1)}</td>
+      <td style="background:${colorForIndex(m.clearIndex)}">${m.clearIndex.toFixed(1)}</td>
+    `;
+    forecastBody.appendChild(tr);
+  });
   const dailyBody = document.querySelector('#daily-table tbody');
   dailyBody.innerHTML = '';
   dailyMetrics(days, stats).forEach(m => {
@@ -215,7 +269,7 @@ function renderReport(report) {
       <td>${m.cloud.toFixed(1)}</td>
       <td>${m.wind.toFixed(1)}</td>
       <td>${m.darkness.toFixed(1)}</td>
-      <td>${m.clearIndex.toFixed(1)}</td>
+      <td style="background:${colorForIndex(m.clearIndex)}">${m.clearIndex.toFixed(1)}</td>
     `;
     dailyBody.appendChild(tr);
   });
@@ -224,18 +278,18 @@ function renderReport(report) {
   tbody.innerHTML = '';
   periods.forEach(p => {
     const metrics = averageMetrics(p, days, stats);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${p}</td>
-      <td>${metrics.temp.toFixed(1)}</td>
-      <td>${metrics.hum.toFixed(1)}</td>
-      <td>${metrics.cloud.toFixed(1)}</td>
-      <td>${metrics.wind.toFixed(1)}</td>
-      <td>${metrics.darkness.toFixed(1)}</td>
-      <td>${metrics.clearIndex.toFixed(1)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p}</td>
+        <td>${metrics.temp.toFixed(1)}</td>
+        <td>${metrics.hum.toFixed(1)}</td>
+        <td>${metrics.cloud.toFixed(1)}</td>
+        <td>${metrics.wind.toFixed(1)}</td>
+        <td>${metrics.darkness.toFixed(1)}</td>
+        <td style="background:${colorForIndex(metrics.clearIndex)}">${metrics.clearIndex.toFixed(1)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
 
   const monthlyBody = document.querySelector('#monthly-table tbody');
   monthlyBody.innerHTML = '';
@@ -244,19 +298,20 @@ function renderReport(report) {
   saveStoredMonthly(updated);
   Object.keys(updated).sort().slice(-12).reverse().forEach(m => {
     const val = updated[m];
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${m}</td>
-      <td>${val.temp.toFixed(1)}</td>
-      <td>${val.hum.toFixed(1)}</td>
-      <td>${val.cloud.toFixed(1)}</td>
-      <td>${val.wind.toFixed(1)}</td>
-      <td>${val.darkness.toFixed(1)}</td>
-      <td>${val.clearIndex.toFixed(1)}</td>
-    `;
-    monthlyBody.appendChild(tr);
-  });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${m}</td>
+        <td>${val.temp.toFixed(1)}</td>
+        <td>${val.hum.toFixed(1)}</td>
+        <td>${val.cloud.toFixed(1)}</td>
+        <td>${val.wind.toFixed(1)}</td>
+        <td>${val.darkness.toFixed(1)}</td>
+        <td style="background:${colorForIndex(val.clearIndex)}">${val.clearIndex.toFixed(1)}</td>
+      `;
+      monthlyBody.appendChild(tr);
+    });
   document.getElementById('status').style.display = 'none';
+  document.getElementById('forecast-table').style.display = '';
   document.getElementById('daily-table').style.display = '';
   document.getElementById('summary-table').style.display = '';
   document.getElementById('monthly-table').style.display = '';
