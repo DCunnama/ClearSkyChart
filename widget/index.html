@@ -181,7 +181,8 @@ function averageMetrics(dayRange, days, stats) {
 }
 
 function dailyMetrics(days, stats) {
-  return days.slice(-7).reverse().map(d => {
+  const today = new Date().toISOString().slice(0,10);
+  return days.filter(d => d < today).slice(-7).reverse().map(d => {
     const s = stats[d];
     return {
       date: d,
