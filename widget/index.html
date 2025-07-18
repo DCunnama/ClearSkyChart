@@ -180,8 +180,14 @@ function processData(hourly) {
     stats[date].hum += hourly.relativehumidity_2m[i];
     stats[date].cloud += hourly.cloudcover[i];
     stats[date].wind += hourly.windspeed_10m[i];
-    const dt = new Date(hourly.time[i] + 'Z');
-    if (sunAltitude(dt, lat, lon) <= -18) stats[date].nightHours++;
+  }
+  // compute astronomical darkness to the nearest minute
+  for (const d of Object.keys(stats)) {
+    const start = new Date(d + 'T00:00:00Z');
+    for (let m = 0; m < 1440; m++) {
+      const dt = new Date(start.getTime() + m * 60000);
+      if (sunAltitude(dt, lat, lon) <= -18) stats[d].nightHours += 1/60;
+    }
   }
   const days = Object.keys(stats).sort();
   return { days, stats };
