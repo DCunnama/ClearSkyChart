@@ -31,7 +31,7 @@
         <th>Avg Humidity %</th>
         <th>Avg Cloud %</th>
         <th>Avg Wind m/s</th>
-        <th>Darkness %</th>
+        <th>Dark Hrs</th>
         <th>Clear Sky Index</th>
       </tr>
     </thead>
@@ -46,7 +46,7 @@
         <th>Avg Humidity %</th>
         <th>Avg Cloud %</th>
         <th>Avg Wind m/s</th>
-        <th>Darkness %</th>
+        <th>Dark Hrs</th>
         <th>Clear Sky Index</th>
       </tr>
     </thead>
@@ -61,7 +61,7 @@
         <th>Avg Humidity %</th>
         <th>Avg Cloud %</th>
         <th>Avg Wind m/s</th>
-        <th>Darkness %</th>
+        <th>Dark Hrs</th>
         <th>Clear Sky Index</th>
       </tr>
     </thead>
@@ -76,7 +76,7 @@
         <th>Avg Humidity %</th>
         <th>Avg Cloud %</th>
         <th>Avg Wind m/s</th>
-        <th>Darkness %</th>
+        <th>Dark Hrs</th>
         <th>Clear Sky Index</th>
       </tr>
     </thead>
@@ -98,6 +98,28 @@ function colorForIndex(val) {
   if (val < 60) return 'LightSkyBlue';
   if (val < 80) return 'SkyBlue';
   return 'DeepSkyBlue';
+}
+
+function sunAltitude(date, lat, lon) {
+  const rad = Math.PI / 180;
+  const latRad = lat * rad;
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const dayOfYear = Math.floor((date - start) / 86400000);
+  const hour = date.getUTCHours() + date.getUTCMinutes() / 60;
+  const gamma = 2 * Math.PI / 365 * (dayOfYear - 1 + (hour - 12) / 24);
+  const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma)
+              - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma)
+              - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma)
+                        - 0.032077 * Math.sin(gamma)
+                        - 0.014615 * Math.cos(2 * gamma)
+                        - 0.040849 * Math.sin(2 * gamma));
+  const timeOffset = eqt + 4 * lon;
+  const tst = hour * 60 + timeOffset;
+  const ha = (tst / 4 - 180) * rad;
+  const alt = Math.asin(Math.sin(latRad) * Math.sin(decl)
+              + Math.cos(latRad) * Math.cos(decl) * Math.cos(ha));
+  return alt / rad;
 }
 
 function loadStoredMonthly() {
@@ -151,7 +173,8 @@ function processData(hourly) {
     stats[date].hum += hourly.relativehumidity_2m[i];
     stats[date].cloud += hourly.cloudcover[i];
     stats[date].wind += hourly.windspeed_10m[i];
-    if (hourly.is_day[i] === 0) stats[date].nightHours++;
+    const dt = new Date(hourly.time[i] + 'Z');
+    if (sunAltitude(dt, lat, lon) <= -18) stats[date].nightHours++;
   }
   const days = Object.keys(stats).sort();
   return { days, stats };
@@ -175,7 +198,7 @@ function averageMetrics(dayRange, days, stats) {
     hum: sumHum / totalHours,
     cloud: sumCloud / totalHours,
     wind: sumWind / totalHours,
-    darkness: 100 * nightHours / totalHours,
+    darkHours: nightHours / slice.length,
     clearIndex: 100 - (sumCloud / totalHours)
   };
 }
@@ -190,7 +213,7 @@ function dailyMetrics(days, stats) {
       hum: s.hum / s.count,
       cloud: s.cloud / s.count,
       wind: s.wind / s.count,
-      darkness: 100 * s.nightHours / s.count,
+      darkHours: s.nightHours,
       clearIndex: 100 - (s.cloud / s.count)
     };
   });
@@ -206,7 +229,7 @@ function forecastMetrics(days, stats) {
       hum: s.hum / s.count,
       cloud: s.cloud / s.count,
       wind: s.wind / s.count,
-      darkness: 100 * s.nightHours / s.count,
+      darkHours: s.nightHours,
       clearIndex: 100 - (s.cloud / s.count)
     };
   });
@@ -235,7 +258,7 @@ function monthlyMetrics(days, stats) {
       hum: s.hum / s.count,
       cloud: s.cloud / s.count,
       wind: s.wind / s.count,
-      darkness: 100 * s.nightHours / s.count,
+      darkHours: s.nightHours / (s.count / 24),
       clearIndex: 100 - (s.cloud / s.count)
     };
   });
@@ -254,7 +277,7 @@ function renderReport(report) {
       <td>${m.hum.toFixed(1)}</td>
       <td>${m.cloud.toFixed(1)}</td>
       <td>${m.wind.toFixed(1)}</td>
-      <td>${m.darkness.toFixed(1)}</td>
+      <td>${m.darkHours.toFixed(1)}</td>
       <td style="background:${colorForIndex(m.clearIndex)}">${m.clearIndex.toFixed(1)}</td>
     `;
     forecastBody.appendChild(tr);
@@ -269,7 +292,7 @@ function renderReport(report) {
       <td>${m.hum.toFixed(1)}</td>
       <td>${m.cloud.toFixed(1)}</td>
       <td>${m.wind.toFixed(1)}</td>
-      <td>${m.darkness.toFixed(1)}</td>
+      <td>${m.darkHours.toFixed(1)}</td>
       <td style="background:${colorForIndex(m.clearIndex)}">${m.clearIndex.toFixed(1)}</td>
     `;
     dailyBody.appendChild(tr);
@@ -286,7 +309,7 @@ function renderReport(report) {
         <td>${metrics.hum.toFixed(1)}</td>
         <td>${metrics.cloud.toFixed(1)}</td>
         <td>${metrics.wind.toFixed(1)}</td>
-        <td>${metrics.darkness.toFixed(1)}</td>
+        <td>${metrics.darkHours.toFixed(1)}</td>
         <td style="background:${colorForIndex(metrics.clearIndex)}">${metrics.clearIndex.toFixed(1)}</td>
       `;
       tbody.appendChild(tr);
@@ -306,7 +329,7 @@ function renderReport(report) {
         <td>${val.hum.toFixed(1)}</td>
         <td>${val.cloud.toFixed(1)}</td>
         <td>${val.wind.toFixed(1)}</td>
-        <td>${val.darkness.toFixed(1)}</td>
+        <td>${val.darkHours.toFixed(1)}</td>
         <td style="background:${colorForIndex(val.clearIndex)}">${val.clearIndex.toFixed(1)}</td>
       `;
       monthlyBody.appendChild(tr);
