@@ -143,6 +143,11 @@ function formatHours(hours) {
   return `${h}h${m}`;
 }
 
+function daysInMonth(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
 function loadStoredMonthly() {
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || {};
@@ -156,12 +161,18 @@ function saveStoredMonthly(data) {
 }
 
 function mergeMonthly(stored, fresh) {
+  // integrate new monthly data and discard incomplete months
   fresh.forEach(m => { stored[m.month] = m; });
-  // keep at most 24 months of history
-  const months = Object.keys(stored).sort();
-  const keep = months.slice(-24);
   const trimmed = {};
-  keep.forEach(k => { trimmed[k] = stored[k]; });
+  Object.keys(stored)
+    .sort()
+    .slice(-24)
+    .forEach(k => {
+      const val = stored[k];
+      if (val.hours === undefined || val.hours >= daysInMonth(k) * 24) {
+        trimmed[k] = val;
+      }
+    });
   return trimmed;
 }
 
@@ -263,8 +274,9 @@ function forecastMetrics(days, stats) {
 }
 
 function monthlyMetrics(days, stats) {
+  const today = new Date().toISOString().slice(0, 10);
   const months = {};
-  days.forEach(d => {
+  days.filter(d => d < today).forEach(d => {
     const m = d.slice(0, 7); // YYYY-MM
     if (!months[m]) {
       months[m] = {count:0, temp:0, hum:0, cloud:0, wind:0, nightHours:0};
@@ -277,18 +289,23 @@ function monthlyMetrics(days, stats) {
     months[m].wind += s.wind;
     months[m].nightHours += s.nightHours;
   });
-  return Object.keys(months).sort().slice(-12).map(m => {
-    const s = months[m];
-    return {
-      month: m,
-      temp: s.temp / s.count,
-      hum: s.hum / s.count,
-      cloud: s.cloud / s.count,
-      wind: s.wind / s.count,
-      darkHours: s.nightHours / (s.count / 24),
-      clearIndex: 100 - (s.cloud / s.count)
-    };
-  });
+  return Object.keys(months)
+    .sort()
+    .filter(m => months[m].count >= daysInMonth(m) * 24)
+    .slice(-12)
+    .map(m => {
+      const s = months[m];
+      return {
+        month: m,
+        hours: s.count,
+        temp: s.temp / s.count,
+        hum: s.hum / s.count,
+        cloud: s.cloud / s.count,
+        wind: s.wind / s.count,
+        darkHours: s.nightHours / (s.count / 24),
+        clearIndex: 100 - (s.cloud / s.count)
+      };
+    });
 }
 
 function renderReport(report) {
