@@ -122,6 +122,13 @@ function sunAltitude(date, lat, lon) {
   return alt / rad;
 }
 
+function formatHours(hours) {
+  const mins = Math.round(hours * 60);
+  const h = String(Math.floor(mins / 60)).padStart(2, '0');
+  const m = String(mins % 60).padStart(2, '0');
+  return `${h}h${m}`;
+}
+
 function loadStoredMonthly() {
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || {};
@@ -277,7 +284,7 @@ function renderReport(report) {
       <td>${m.hum.toFixed(1)}</td>
       <td>${m.cloud.toFixed(1)}</td>
       <td>${m.wind.toFixed(1)}</td>
-      <td>${m.darkHours.toFixed(1)}</td>
+      <td>${formatHours(m.darkHours)}</td>
       <td style="background:${colorForIndex(m.clearIndex)}">${m.clearIndex.toFixed(1)}</td>
     `;
     forecastBody.appendChild(tr);
@@ -292,7 +299,7 @@ function renderReport(report) {
       <td>${m.hum.toFixed(1)}</td>
       <td>${m.cloud.toFixed(1)}</td>
       <td>${m.wind.toFixed(1)}</td>
-      <td>${m.darkHours.toFixed(1)}</td>
+      <td>${formatHours(m.darkHours)}</td>
       <td style="background:${colorForIndex(m.clearIndex)}">${m.clearIndex.toFixed(1)}</td>
     `;
     dailyBody.appendChild(tr);
@@ -309,7 +316,7 @@ function renderReport(report) {
         <td>${metrics.hum.toFixed(1)}</td>
         <td>${metrics.cloud.toFixed(1)}</td>
         <td>${metrics.wind.toFixed(1)}</td>
-        <td>${metrics.darkHours.toFixed(1)}</td>
+        <td>${formatHours(metrics.darkHours)}</td>
         <td style="background:${colorForIndex(metrics.clearIndex)}">${metrics.clearIndex.toFixed(1)}</td>
       `;
       tbody.appendChild(tr);
@@ -329,7 +336,7 @@ function renderReport(report) {
         <td>${val.hum.toFixed(1)}</td>
         <td>${val.cloud.toFixed(1)}</td>
         <td>${val.wind.toFixed(1)}</td>
-        <td>${val.darkHours.toFixed(1)}</td>
+        <td>${formatHours(val.darkHours)}</td>
         <td style="background:${colorForIndex(val.clearIndex)}">${val.clearIndex.toFixed(1)}</td>
       `;
       monthlyBody.appendChild(tr);
