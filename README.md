@@ -1,6 +1,6 @@
 # ClearSkyChart
 
-This repository contains a simple web widget that fetches weather data for **Sutherland, South Africa** using the [Open-Meteo](https://open-meteo.com/) API. Because the service only provides roughly three months of historical hourly data, the widget requests the most recent 92 days of history and seven days of forecast data. It persists computed monthly averages in the browser. The page now shows a forecast for the next week (starting today), daily metrics for the previous week, 7/14/28‑day averages, and monthly averages for up to the last year. The monthly table only displays months that have a full set of data. The widget is implemented in `widget/index.html` and can be embedded in any webpage.
+This repository contains a simple web widget that fetches weather data for **Sutherland, South Africa** using the [Open-Meteo](https://open-meteo.com/) API. Because the service only provides roughly three months of historical hourly data, the widget requests the most recent 92 days of history and seven days of forecast data. It persists computed monthly averages in the browser. The page now shows a forecast for the next week (starting today), daily metrics for the previous week, 7/14/28‑day averages, and monthly averages for up to the last year. The monthly table only displays months that have a full set of hourly data. Each month's entry records the number of hours so incomplete months can be ignored on subsequent loads. The widget is implemented in `widget/index.html` and can be embedded in any webpage.
 
 ## Usage
 
