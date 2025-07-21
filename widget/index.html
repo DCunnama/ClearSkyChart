@@ -161,12 +161,18 @@ function saveStoredMonthly(data) {
 }
 
 function mergeMonthly(stored, fresh) {
+  // integrate new monthly data and discard incomplete months
   fresh.forEach(m => { stored[m.month] = m; });
-  // keep at most 24 months of history
-  const months = Object.keys(stored).sort();
-  const keep = months.slice(-24);
   const trimmed = {};
-  keep.forEach(k => { trimmed[k] = stored[k]; });
+  Object.keys(stored)
+    .sort()
+    .slice(-24)
+    .forEach(k => {
+      const val = stored[k];
+      if (val.hours === undefined || val.hours >= daysInMonth(k) * 24) {
+        trimmed[k] = val;
+      }
+    });
   return trimmed;
 }
 
@@ -291,6 +297,7 @@ function monthlyMetrics(days, stats) {
       const s = months[m];
       return {
         month: m,
+        hours: s.count,
         temp: s.temp / s.count,
         hum: s.hum / s.count,
         cloud: s.cloud / s.count,
