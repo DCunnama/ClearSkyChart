@@ -17,3 +17,27 @@ The code does not require any build step and only relies on the browser's fetch 
 If the widget displays **"Failed to load data"**, ensure that your network
 allows connections to `api.open-meteo.com`. Some environments block external
 requests, which will prevent the data from loading.
+
+## Example: Requesting Current Weather
+
+When using `current_weather=true` with the Open‑Meteo API you must also request
+at least one weather variable. Otherwise the service returns `400 Bad Request`.
+The snippet below fetches current conditions for a location while requesting
+hourly temperature data:
+
+```javascript
+const lat = 32.4;
+const lon = 18.5;
+const url =
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+  `&current_weather=true&hourly=temperature_2m`;
+
+fetch(url)
+  .then(res => {
+    if (!res.ok) throw new Error('Request failed with status ' + res.status);
+    return res.json();
+  })
+  .then(data => console.log(data))
+  .catch(err => console.error(err));
+```
+
