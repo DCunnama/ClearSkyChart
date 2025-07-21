@@ -62,7 +62,7 @@
     <tbody></tbody>
   </table>
   </div>
-  <h3>7/14/28 Day Averages</h3>
+  <h3>7/14/28/90 Day Averages</h3>
   <div class="table-wrap">
   <table id="summary-table" style="display:none">
     <thead>
@@ -79,32 +79,13 @@
     <tbody></tbody>
   </table>
   </div>
-  <h3>Monthly Averages (last 12 months)</h3>
-  <div class="table-wrap">
-  <table id="monthly-table" style="display:none">
-    <thead>
-      <tr>
-        <th>Month</th>
-        <th>Avg Temp °C</th>
-        <th>Avg Humidity %</th>
-        <th>Avg Cloud %</th>
-        <th>Avg Wind m/s</th>
-        <th>Dark Hrs</th>
-        <th>Clear Sky Index</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-  </div>
 </div>
 <script>
 const lat = -32.4;
 const lon = 20.7;
 // Open-Meteo only allows ~92 days of historical hourly data
-// so we request the last 3 months and persist monthly averages
+// so we request the last 3 months of data
 const days = 92;
-
-const storageKey = 'csc-monthly';
 
 function colorForIndex(val) {
   if (val < 20) return 'LightSlateGray';
@@ -143,38 +124,6 @@ function formatHours(hours) {
   return `${h}h${m}`;
 }
 
-function daysInMonth(ym) {
-  const [y, m] = ym.split('-').map(Number);
-  return new Date(Date.UTC(y, m, 0)).getUTCDate();
-}
-
-function loadStoredMonthly() {
-  try {
-    return JSON.parse(localStorage.getItem(storageKey)) || {};
-  } catch {
-    return {};
-  }
-}
-
-function saveStoredMonthly(data) {
-  localStorage.setItem(storageKey, JSON.stringify(data));
-}
-
-function mergeMonthly(stored, fresh) {
-  // integrate new monthly data and discard incomplete months
-  fresh.forEach(m => { stored[m.month] = m; });
-  const trimmed = {};
-  Object.keys(stored)
-    .sort()
-    .slice(-24)
-    .forEach(k => {
-      const val = stored[k];
-      if (val.hours === undefined || val.hours >= daysInMonth(k) * 24) {
-        trimmed[k] = val;
-      }
-    });
-  return trimmed;
-}
 
 async function loadWeather() {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
@@ -273,41 +222,6 @@ function forecastMetrics(days, stats) {
   });
 }
 
-function monthlyMetrics(days, stats) {
-  const today = new Date().toISOString().slice(0, 10);
-  const months = {};
-  days.filter(d => d < today).forEach(d => {
-    const m = d.slice(0, 7); // YYYY-MM
-    if (!months[m]) {
-      months[m] = {count:0, temp:0, hum:0, cloud:0, wind:0, nightHours:0};
-    }
-    const s = stats[d];
-    months[m].count += s.count;
-    months[m].temp += s.temp;
-    months[m].hum += s.hum;
-    months[m].cloud += s.cloud;
-    months[m].wind += s.wind;
-    months[m].nightHours += s.nightHours;
-  });
-  return Object.keys(months)
-    .sort()
-    .filter(m => months[m].count >= daysInMonth(m) * 24)
-    .slice(-12)
-    .map(m => {
-      const s = months[m];
-      return {
-        month: m,
-        hours: s.count,
-        temp: s.temp / s.count,
-        hum: s.hum / s.count,
-        cloud: s.cloud / s.count,
-        wind: s.wind / s.count,
-        darkHours: s.nightHours / (s.count / 24),
-        clearIndex: 100 - (s.cloud / s.count)
-      };
-    });
-}
-
 function renderReport(report) {
   const days = report.days;
   const stats = report.stats;
@@ -341,7 +255,7 @@ function renderReport(report) {
     `;
     dailyBody.appendChild(tr);
   });
-  const periods = [7, 14, 28];
+  const periods = [7, 14, 28, 90];
   const tbody = document.querySelector('#summary-table tbody');
   tbody.innerHTML = '';
   periods.forEach(p => {
@@ -359,30 +273,10 @@ function renderReport(report) {
       tbody.appendChild(tr);
     });
 
-  const monthlyBody = document.querySelector('#monthly-table tbody');
-  monthlyBody.innerHTML = '';
-  const stored = loadStoredMonthly();
-  const updated = mergeMonthly(stored, monthlyMetrics(days, stats));
-  saveStoredMonthly(updated);
-  Object.keys(updated).sort().slice(-12).reverse().forEach(m => {
-    const val = updated[m];
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${m}</td>
-        <td>${val.temp.toFixed(1)}</td>
-        <td>${val.hum.toFixed(1)}</td>
-        <td>${val.cloud.toFixed(1)}</td>
-        <td>${val.wind.toFixed(1)}</td>
-        <td>${formatHours(val.darkHours)}</td>
-        <td style="background:${colorForIndex(val.clearIndex)}">${val.clearIndex.toFixed(1)}</td>
-      `;
-      monthlyBody.appendChild(tr);
-    });
   document.getElementById('status').style.display = 'none';
   document.getElementById('forecast-table').style.display = '';
   document.getElementById('daily-table').style.display = '';
   document.getElementById('summary-table').style.display = '';
-  document.getElementById('monthly-table').style.display = '';
 }
 
 loadWeather();
