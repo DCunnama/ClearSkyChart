@@ -126,9 +126,7 @@ function formatHours(hours) {
 
 
 async function loadWeather() {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-              `&hourly=temperature_2m,relativehumidity_2m,cloudcover,windspeed_10m,is_day` +
-              `&past_days=${days}&forecast_days=7&timezone=UTC`;
+  const url = '/weather.php';
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error('Network response was not ok');
@@ -138,7 +136,8 @@ async function loadWeather() {
   } catch (err) {
     const msg = 'Failed to load data: ' + (err.message || err);
     document.getElementById('status').textContent = msg;
-    console.error(err);
+    console.error('Error loading weather data:', err);
+    console.log('API URL:', url);
   }
 }
 

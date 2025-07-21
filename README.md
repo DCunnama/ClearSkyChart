@@ -12,6 +12,11 @@ This repository contains a simple web widget that fetches weather data for **Sut
 
 The code does not require any build step and only relies on the browser's fetch API. Internet access is required at runtime to retrieve data from Open-Meteo.
 
+When deploying the widget, make sure your site is served over **HTTPS** and use
+the provided `weather.php` proxy to forward requests to the Open‑Meteo service.
+Fetching weather data through this proxy avoids CORS problems and can reduce the
+chance of hitting IP based rate limits.
+
 ## Troubleshooting
 
 If the widget displays **"Failed to load data"**, ensure that your network
