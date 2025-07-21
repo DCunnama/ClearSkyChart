@@ -17,6 +17,10 @@ the provided `weather.php` proxy to forward requests to the Open‑Meteo service
 Fetching weather data through this proxy avoids CORS problems and can reduce the
 chance of hitting IP based rate limits.
 
+
+## WordPress Plugin
+
+This repository can be installed as a WordPress plugin. Upload the entire directory to your site's `wp-content/plugins` folder and activate **Clear Sky Chart** from the admin Plugins page. Use the `[clearskychart]` shortcode in a post or page to embed the widget.
 ## Troubleshooting
 
 If the widget displays **"Failed to load data"**, ensure that your network
@@ -24,6 +28,7 @@ allows connections to `api.open-meteo.com`. Some environments block external
 requests, which will prevent the data from loading.
 
 ## Example: Requesting Current Weather
+
 
 When using `current_weather=true` with the Open‑Meteo API you must also request
 at least one weather variable. Otherwise the service returns `400 Bad Request`.
