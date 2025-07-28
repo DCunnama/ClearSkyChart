@@ -7,7 +7,7 @@ This repository contains a simple web widget that fetches weather data for **Sut
 1. Open `widget/index.html` in a browser. The script requests the most recent 92 days of historical data along with a 7‑day forecast from the Open-Meteo API. It displays three tables: a forecast for the next week, daily averages for the past week (yesterday back seven days), and overall averages for 7, 14, 28 and 90 day periods.
 2. To embed the widget in another page, copy the file or include it with an `<iframe>`:
    ```html
-   <iframe src="/path/to/widget/index.html" style="border:0;width:660px;height:600px"></iframe>
+   <iframe src="/path/to/widget/index.html" style="border:0;width:100%;height:600px;z-index:1;position:relative"></iframe>
    ```
 
 The code does not require any build step and only relies on the browser's fetch API. Internet access is required at runtime to retrieve data from Open-Meteo.
